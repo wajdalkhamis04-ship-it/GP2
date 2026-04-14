@@ -55,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 160),
                       Obx(
                         () => Text(
                           userController.userName.value,

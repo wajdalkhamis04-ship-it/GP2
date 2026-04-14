@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:aman_play/widgets/custom_button.dart';
 import 'package:aman_play/screens/permission_page.dart';
 

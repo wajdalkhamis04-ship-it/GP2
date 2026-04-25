@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Detection2Screen extends StatefulWidget {
   const Detection2Screen({super.key});
@@ -9,19 +11,133 @@ class Detection2Screen extends StatefulWidget {
 
 class _Detection2ScreenState extends State<Detection2Screen> {
   bool _isRecording = false;
+  String? _recordedFilePath;
+  final AudioRecorder _recorder = AudioRecorder();
   final TextEditingController _textController = TextEditingController();
 
+  // ── Text analysis state ──────────────────────────────────────────────────────
+  bool _isAnalyzing = false;
+  String? _analysisResult;
+
+  // ── Output path ──────────────────────────────────────────────────────────────
+  Future<String> _getOutputPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '${dir.path}/recording_$timestamp.m4a';
+  }
+
+  // ── Start recording ──────────────────────────────────────────────────────────
+  // No permission requests here — already handled in PermissionPage
+  Future<void> _startRecording() async {
+    if (!await _recorder.hasPermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'لم يتم منح إذن الميكروفون.',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final path = await _getOutputPath();
+
+    await _recorder.start(
+      RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+      ),
+      path: path,
+    );
+
+    setState(() {
+      _isRecording = true;
+      _recordedFilePath = path;
+    });
+  }
+
+  // ── Stop recording ───────────────────────────────────────────────────────────
+  Future<void> _stopRecording() async {
+    final path = await _recorder.stop();
+    setState(() {
+      _isRecording = false;
+      _recordedFilePath = path;
+    });
+
+    if (path != null) {
+      debugPrint('Recording saved to: $path');
+      // TODO: send `path` to your audio bullying-detection API
+    }
+  }
+
+  // ── Toggle recording ─────────────────────────────────────────────────────────
   void _toggleRecording() {
-    setState(() => _isRecording = !_isRecording);
-    // TODO: Hook up actual mic recording logic here
+    if (_isRecording) {
+      _stopRecording();
+    } else {
+      _startRecording();
+    }
+  }
+
+  // ── Text analysis ────────────────────────────────────────────────────────────
+  Future<void> _analyzeText() async {
+    final text = _textController.text.trim();
+
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'يرجى كتابة نص للتحليل.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isAnalyzing = true;
+      _analysisResult = null;
+    });
+
+    try {
+      // TODO: Replace with your actual API call
+      // Example:
+      // final response = await http.post(
+      //   Uri.parse('https://your-api.com/analyze'),
+      //   headers: {'Content-Type': 'application/json'},
+      //   body: jsonEncode({'text': text}),
+      // );
+      // final result = jsonDecode(response.body);
+      // setState(() => _analysisResult = result['label']);
+
+      // ── Simulated response (remove when API is ready) ──
+      await Future.delayed(const Duration(seconds: 2));
+      setState(() {
+        _analysisResult = 'لا يوجد تنمر'; // placeholder result
+      });
+      // ──────────────────────────────────────────────────
+    } catch (e) {
+      setState(() {
+        _analysisResult = 'حدث خطأ أثناء التحليل.';
+      });
+    } finally {
+      setState(() => _isAnalyzing = false);
+    }
   }
 
   @override
   void dispose() {
+    _recorder.dispose();
     _textController.dispose();
     super.dispose();
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -30,17 +146,14 @@ class _Detection2ScreenState extends State<Detection2Screen> {
         backgroundColor: const Color(0xFFEAF7F5),
         body: Stack(
           children: [
-            // Background decorative shapes (same as detection.dart)
             _buildBackground(),
-
-            // Content
             SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back arrow
                   Padding(
-                    padding: const EdgeInsets.only(top: 12, left: 16, right: 16),
+                    padding:
+                        const EdgeInsets.only(top: 12, left: 16, right: 16),
                     child: GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Icon(
@@ -50,8 +163,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
                       ),
                     ),
                   ),
-
-                  // Cards
                   Expanded(
                     child: Center(
                       child: Padding(
@@ -59,10 +170,8 @@ class _Detection2ScreenState extends State<Detection2Screen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Audio detection card
                             _buildAudioCard(),
                             const SizedBox(height: 20),
-                            // Text detection card
                             _buildTextCard(),
                           ],
                         ),
@@ -81,7 +190,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
   Widget _buildBackground() {
     return Stack(
       children: [
-        // Top-right large teal circle
         Positioned(
           top: -60,
           right: -60,
@@ -94,7 +202,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
         ),
-        // Top-right white circle overlap
         Positioned(
           top: -20,
           right: 60,
@@ -107,7 +214,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
         ),
-        // Bottom-left teal circle
         Positioned(
           bottom: -60,
           left: -60,
@@ -120,7 +226,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
         ),
-        // Bottom-left white circle overlap
         Positioned(
           bottom: -20,
           left: 60,
@@ -133,7 +238,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
         ),
-        // Decorative gold ring bottom-left
         Positioned(
           bottom: 80,
           left: -40,
@@ -149,7 +253,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
         ),
-        // Decorative gold ring top-right
         Positioned(
           top: 80,
           right: -40,
@@ -186,7 +289,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
       ),
       child: Column(
         children: [
-          // Title
           const Text(
             'كشف التنمر الصوتي',
             textAlign: TextAlign.center,
@@ -198,7 +300,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Record button
           GestureDetector(
             onTap: _toggleRecording,
             child: AnimatedContainer(
@@ -223,15 +324,14 @@ class _Detection2ScreenState extends State<Detection2Screen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00A896),
                     borderRadius: _isRecording
-                        ? BorderRadius.circular(4) // square = stop icon
-                        : BorderRadius.circular(12), // circle = record icon
+                        ? BorderRadius.circular(4)
+                        : BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          // Recording status hint
           Text(
             _isRecording ? 'جارٍ التسجيل... اضغط للإيقاف' : 'اضغط للتسجيل',
             style: TextStyle(
@@ -242,6 +342,18 @@ class _Detection2ScreenState extends State<Detection2Screen> {
               fontFamily: 'Cairo',
             ),
           ),
+          if (_recordedFilePath != null && !_isRecording) ...[
+            const SizedBox(height: 6),
+            Text(
+              'تم الحفظ: ${_recordedFilePath!.split('/').last}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF888888),
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -264,7 +376,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
       ),
       child: Column(
         children: [
-          // Title
           const Text(
             'كشف التنمر الكتابي',
             textAlign: TextAlign.center,
@@ -276,7 +387,6 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
           const SizedBox(height: 14),
-          // Text input field
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -314,32 +424,75 @@ class _Detection2ScreenState extends State<Detection2Screen> {
             ),
           ),
           const SizedBox(height: 12),
+
           // Analyse button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: Hook up text analysis logic here
-              },
+              onPressed: _isAnalyzing ? null : _analyzeText,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00A896),
                 foregroundColor: Colors.white,
+                disabledBackgroundColor:
+                    const Color(0xFF00A896).withOpacity(0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 elevation: 0,
               ),
-              child: const Text(
-                'تحليل النص',
+              child: _isAnalyzing
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'تحليل النص',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+            ),
+          ),
+
+          // Analysis result
+          if (_analysisResult != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _analysisResult == 'لا يوجد تنمر'
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _analysisResult == 'لا يوجد تنمر'
+                      ? Colors.green.withOpacity(0.4)
+                      : Colors.red.withOpacity(0.4),
+                ),
+              ),
+              child: Text(
+                _analysisResult!,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
                   fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  color: _analysisResult == 'لا يوجد تنمر'
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

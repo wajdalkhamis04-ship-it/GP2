@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dashboard.dart';
 
 class PermissionPage2 extends StatefulWidget {
@@ -12,8 +13,6 @@ class _PermissionPageState2 extends State<PermissionPage2> {
   @override
   void initState() {
     super.initState();
-
-    // Show the permission dialog after the first frame is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showPermissionDialog();
     });
@@ -29,25 +28,24 @@ class _PermissionPageState2 extends State<PermissionPage2> {
             'يرجى منح الإذن',
             textAlign: TextAlign.center,
           ),
-          content: const Text('يحتاج أمان بلاي إلي إرسال إشعارات مع كل عملية رصد'),
+          content: const Text(
+            'يحتاج أمان بلاي إلى إرسال إشعارات مع كل عملية رصد',
+          ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // close dialog
-                _goToDashboard();       // navigate regardless
+                Navigator.pop(context);
+                _goToDashboard(); // skip permission, go to dashboard
               },
-              child: const Text("لاحقًا", style: TextStyle(color: Colors.teal)),
+              child: const Text('لاحقًا', style: TextStyle(color: Colors.teal)),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // close dialog
-                _handleConfirm();
-                _goToDashboard();       // navigate after confirming
+                Navigator.pop(context);
+                _requestNotificationPermission(); // request then go to dashboard
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-              ),
-              child: const Text("موافق", style: TextStyle(color: Colors.teal)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+              child: const Text('موافق', style: TextStyle(color: Colors.teal)),
             ),
           ],
         );
@@ -55,8 +53,42 @@ class _PermissionPageState2 extends State<PermissionPage2> {
     );
   }
 
-  void _handleConfirm() {
-    print("تم منح الإذن، يمكنك الآن استخدام الميكروفون");
+  Future<void> _requestNotificationPermission() async {
+    final status = await Permission.notification.request();
+
+    if (status.isPermanentlyDenied && mounted) {
+      // User permanently denied — offer to open settings
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('الإذن مرفوض', textAlign: TextAlign.center),
+          content: const Text(
+            'تم رفض إذن الإشعارات بشكل دائم. يرجى تفعيله من إعدادات التطبيق.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _goToDashboard();
+              },
+              child: const Text('تخطي', style: TextStyle(color: Colors.teal)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await openAppSettings();
+                if (mounted) _goToDashboard();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+              child: const Text('فتح الإعدادات',
+                  style: TextStyle(color: Colors.teal)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _goToDashboard();
+    }
   }
 
   void _goToDashboard() {
@@ -69,7 +101,7 @@ class _PermissionPageState2 extends State<PermissionPage2> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: SizedBox.shrink(), // empty screen
+      body: SizedBox.shrink(),
     );
   }
 }

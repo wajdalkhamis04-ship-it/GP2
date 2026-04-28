@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:aman_play/widgets/custom_button.dart';
 import 'package:aman_play/services/auth_service.dart';
 import 'package:aman_play/services/firestore_service.dart';
+import 'package:aman_play/controllers/user_controller.dart';
 import 'Verification_page.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -58,6 +59,10 @@ class _SignUpPageState extends State<SignUpPage> {
           email: email,
           name: fullName,
         );
+        
+        // Update UserController with the new user's data
+        final userController = Get.find<UserController>();
+        userController.updateUserData(fullName, email, '');
       }
       
       // Success - navigate to verification page

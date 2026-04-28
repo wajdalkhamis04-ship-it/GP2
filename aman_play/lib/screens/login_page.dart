@@ -4,6 +4,7 @@ import 'package:aman_play/screens/forget_password_page.dart';
 import 'package:aman_play/widgets/custom_button.dart';
 import 'package:aman_play/screens/Verification_page.dart';
 import 'package:aman_play/services/auth_service.dart';
+import 'package:aman_play/controllers/user_controller.dart';
 import 'package:get/get.dart';
 
 class LoginPage extends StatefulWidget {
@@ -64,6 +65,13 @@ class _LoginPageState extends State<LoginPage> {
 
     // Check for errors
     if (authService.errorMessage.value.isEmpty) {
+      // Get the current user and fetch their data from Firestore
+      final currentUser = authService.currentUser.value;
+      if (currentUser != null) {
+        final userController = Get.find<UserController>();
+        await userController.fetchUserData(currentUser.uid);
+      }
+      
       // Success - navigate to verification page
       Get.offAll(() => const VerificationPage());
     } else {

@@ -12,7 +12,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final UserController userController = Get.put(UserController());
+  final UserController userController = Get.find<UserController>();
   int _selectedIndex = 0;
 
   @override

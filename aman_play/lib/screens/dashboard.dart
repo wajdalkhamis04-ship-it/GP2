@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'detection.dart';
 import 'profile_page.dart';
+import '../controllers/user_controller.dart';
 
 void main() {
   runApp(const dashboard());
@@ -32,6 +34,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final UserController userController = Get.find<UserController>();
   int _selectedIndex = 2; // Dashboard tab selected by default
 
   // Sample weekly data for audio statistics
@@ -134,8 +137,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'اهلاً،',
                       style: TextStyle(
                         color: Colors.white,
@@ -143,14 +146,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         fontWeight: FontWeight.w400,
                       ),
                     ),
-                    Text(
-                      'وجد الخميس',
-                      style: TextStyle(
+                    Obx(() => Text(
+                      userController.userName.value.isEmpty
+                          ? 'وجد الخميس'
+                          : userController.userName.value,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
-                    ),
+                    )),
                   ],
                 ),
                 // Avatar
